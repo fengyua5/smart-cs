@@ -86,12 +86,17 @@ def chat_stream(body: ChatRequest):
             return
 
         full_answer = ""
-        for token in generate_stream(body.question, contexts):
-            full_answer += token
-            yield _sse("token", {"content": token})
+        try:
+            for token in generate_stream(body.question, contexts):
+                full_answer += token
+                yield _sse("token", {"content": token})
+        except Exception as e:
+            err_msg = f"系统处理出错，请稍后重试。"
+            yield _sse("token", {"content": err_msg})
+            full_answer = err_msg
 
-        full_answer = _sanitize_answer(full_answer)
-        confidence, need_review = evaluate_confidence(scores, full_answer)
+        full_answer = _sanitize_answer(full_answer) if full_answer else _FALLBACK_ANSWER
+        confidence, need_review = evaluate_confidence(scores, full_answer) if full_answer else (0.0, True)
 
         db = SessionLocal()
         try:

@@ -1,7 +1,7 @@
 from typing import Generator
 from langchain_ollama import ChatOllama
 from langchain.schema import HumanMessage, SystemMessage
-from app.config import OLLAMA_BASE_URL, LLM_MODEL, LLM_NUM_PREDICT
+from app.config import OLLAMA_BASE_URL, LLM_MODEL
 
 _llm = None
 
@@ -15,7 +15,6 @@ def get_llm():
             model=LLM_MODEL,
             base_url=OLLAMA_BASE_URL,
             temperature=0.3,
-            num_predict=LLM_NUM_PREDICT,
         )
     return _llm
 
