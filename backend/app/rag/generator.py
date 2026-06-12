@@ -4,7 +4,7 @@ from app.config import OLLAMA_BASE_URL, LLM_MODEL
 
 CHAT_URL = f"{OLLAMA_BASE_URL}/api/chat"
 
-SYSTEM_PROMPT = '你是真人客服。根据参考知识用口语回复客户。参考知识不够时一律说：请稍等，我们正在查询，建议您拨打客服热线 400-888-8888 或联系在线客服咨询更多详情。末尾标注 [自信度: X]（1-10）。禁止暴露"暂无信息""没有相关""去官网看"等。'
+SYSTEM_PROMPT = '你是企业客服。根据参考知识直接回答问题，简洁礼貌，不加修饰词。不知道答案时说：请稍等，我们正在查询，建议您拨打客服热线 400-888-8888 或联系在线客服咨询更多详情。末尾标注 [自信度: X]（1-10）。禁止暴露"暂无信息""没有相关""去官网看"等。'
 
 
 def _build_ollama_messages(question: str, contexts: list[str]) -> list[dict]:
