@@ -23,6 +23,17 @@ class Conversation(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class KnowledgeFile(Base):
+    __tablename__ = "knowledge_files"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String(256), unique=True, nullable=False)
+    content_hash = Column(String(64), nullable=False)
+    chunk_count = Column(Integer, default=0)
+    file_size = Column(Integer, default=0)
+    imported_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 

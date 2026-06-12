@@ -35,6 +35,7 @@ echo ""
 echo "=== 启动服务 ==="
 echo "  聊天窗口: http://localhost:8000/static/chat.html"
 echo "  审核面板: http://localhost:8000/static/review.html"
+echo "  知识库管理: http://localhost:8000/static/portal.html"
 echo "  API 文档:  http://localhost:8000/docs"
 echo ""
 

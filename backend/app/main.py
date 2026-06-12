@@ -16,6 +16,7 @@ from app.rag.embedder import get_embeddings
 from app.rag.confidence import evaluate_confidence
 from app.ingest.pipeline import ingest_all
 from app.review.router import router as review_router
+from app.portal.router import router as portal_router
 from app.config import OLLAMA_BASE_URL, LLM_MODEL
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -53,6 +54,7 @@ if os.path.isdir(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 app.include_router(review_router)
+app.include_router(portal_router)
 
 
 _FALLBACK_ANSWER = "请稍等，我们正在查询，建议您拨打客服热线 400-888-8888 或联系在线客服咨询更多详情。"
@@ -170,9 +172,9 @@ def chat(body: ChatRequest, db: Session = Depends(get_session)):
 
 
 @app.post("/api/ingest")
-def ingest(body: IngestRequest):
-    count = ingest_all()
-    return {"message": f"成功导入 {count} 个文档片段"}
+def ingest(body: IngestRequest, db: Session = Depends(get_session)):
+    results = ingest_all(db)
+    return {"results": results}
 
 
 @app.get("/api/health")
