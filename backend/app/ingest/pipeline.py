@@ -31,14 +31,16 @@ def _rebuild_vector_store():
     )
 
 
-def ingest_file(filepath: str, db_session) -> dict:
+def ingest_file(filepath: str, db_session=None) -> dict:
     filename = os.path.basename(filepath)
     content_hash = _file_hash(filepath)
     file_size = os.path.getsize(filepath)
+    existing = None
 
-    existing = db_session.query(KnowledgeFile).filter_by(filename=filename).first()
-    if existing and existing.content_hash == content_hash:
-        return {"status": "skipped", "filename": filename, "reason": "内容相同，已跳过"}
+    if db_session is not None:
+        existing = db_session.query(KnowledgeFile).filter_by(filename=filename).first()
+        if existing and existing.content_hash == content_hash:
+            return {"status": "skipped", "filename": filename, "reason": "内容相同，已跳过"}
 
     dest = os.path.join(KNOWLEDGE_DIR, filename)
     if os.path.abspath(filepath) != os.path.abspath(dest):
@@ -49,18 +51,20 @@ def ingest_file(filepath: str, db_session) -> dict:
 
     _rebuild_vector_store()
 
-    if existing:
-        existing.content_hash = content_hash
-        existing.chunk_count = _count_chunks(filepath)
-        existing.file_size = file_size
-        existing.imported_at = datetime.now(timezone.utc)
-    else:
-        kf = KnowledgeFile(
-            filename=filename, content_hash=content_hash,
-            chunk_count=_count_chunks(filepath), file_size=file_size,
-        )
-        db_session.add(kf)
-    db_session.commit()
+    if db_session is not None:
+        chunk_count = _count_chunks(filepath)
+        if existing:
+            existing.content_hash = content_hash
+            existing.chunk_count = chunk_count
+            existing.file_size = file_size
+            existing.imported_at = datetime.now(timezone.utc)
+        else:
+            kf = KnowledgeFile(
+                filename=filename, content_hash=content_hash,
+                chunk_count=chunk_count, file_size=file_size,
+            )
+            db_session.add(kf)
+        db_session.commit()
 
     return {"status": "imported" if not existing else "updated", "filename": filename}
 
