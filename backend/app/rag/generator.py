@@ -25,7 +25,7 @@ def generate_stream(question: str, contexts: list[str]) -> Generator[str, None, 
         "model": LLM_MODEL,
         "messages": messages,
         "stream": True,
-        "options": {"temperature": 0.1, "num_predict": 1024},
+        "options": {"temperature": 0.1, "num_predict": 300},
     }
     with httpx.stream("POST", CHAT_URL, json=payload, timeout=None) as resp:
         for line in resp.iter_lines():
