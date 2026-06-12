@@ -47,7 +47,7 @@ def chat(body: ChatRequest, db: Session = Depends(get_session)):
         conv = Conversation(
             session_id=body.session_id,
             question=body.question,
-            answer="抱歉，知识库中未找到相关信息，无法回答该问题。",
+            answer="请稍等，我们正在查询，建议您拨打客服热线 400-888-8888 或联系在线客服咨询更多详情。",
             confidence=0.0,
             need_review=True,
         )
