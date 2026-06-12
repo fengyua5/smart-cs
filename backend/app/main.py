@@ -10,20 +10,31 @@ from contextlib import asynccontextmanager
 from app.database import init_db, get_session, SessionLocal, Conversation
 from app.models import ChatRequest, ChatResponse, IngestRequest
 from app.rag.retriever import retrieve
-from app.rag.generator import generate_answer, generate_stream, get_llm
+import httpx
+from app.rag.generator import generate_answer, generate_stream
 from app.rag.embedder import get_embeddings
 from app.rag.confidence import evaluate_confidence
 from app.ingest.pipeline import ingest_all
 from app.review.router import router as review_router
+from app.config import OLLAMA_BASE_URL, LLM_MODEL
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _warmup_llm():
+    with httpx.Client() as client:
+        client.post(
+            f"{OLLAMA_BASE_URL}/api/chat",
+            json={"model": LLM_MODEL, "messages": [{"role": "user", "content": "Hi"}], "stream": False, "options": {"num_predict": 1}},
+            timeout=120,
+        )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     get_embeddings()
-    get_llm()
+    _warmup_llm()
     yield
 
 
