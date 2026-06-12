@@ -1,7 +1,6 @@
 ---
 description: Smart CS 智能客服系统专属 Agent。用于维护、开发、调试项目代码。
 mode: primary
-model: openai/gpt-4o
 permission:
   edit: allow
   bash: allow

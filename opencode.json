@@ -5,7 +5,7 @@
     "smart-cs": {
       "description": "Smart CS AI 智能客服系统维护与开发",
       "mode": "primary",
-      "model": "openai/gpt-4o",
+
       "permission": { "edit": "allow", "bash": "allow" }
     }
   },
