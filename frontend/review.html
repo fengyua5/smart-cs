@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人工审核面板</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 24px; color: #333; }
+h1 { font-size: 22px; margin-bottom: 20px; }
+.tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
+.tab { padding: 10px 24px; cursor: pointer; border: none; background: none; font-size: 14px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tab.active { color: #4f46e5; border-bottom-color: #4f46e5; font-weight: 600; }
+.review-card { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.review-card .question { font-weight: 600; margin-bottom: 8px; font-size: 15px; }
+.review-card .label { font-size: 12px; color: #999; margin-top: 8px; }
+.review-card .answer { font-size: 14px; color: #555; line-height: 1.6; margin-top: 4px; padding: 8px; background: #f9f9f9; border-radius: 6px; }
+.review-card .confidence { font-size: 12px; color: #999; margin-top: 6px; }
+.review-card .actions { display: flex; gap: 8px; margin-top: 12px; }
+.review-card textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical; min-height: 80px; }
+.btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.btn-primary { background: #4f46e5; color: #fff; }
+.btn-success { background: #10b981; color: #fff; }
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-outline { background: #fff; border: 1px solid #ddd; color: #666; }
+.empty-state { text-align: center; padding: 40px; color: #999; }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.badge-pending { display: inline-block; background: #fff3e0; color: #e65100; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.badge-done { display: inline-block; background: #e8f5e9; color: #2e7d32; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<h1>📋 人工审核面板</h1>
+<div class="tabs">
+<button class="tab active" onclick="switchTab('pending')">待审核</button>
+<button class="tab" onclick="switchTab('history')">已审核</button>
+</div>
+<div id="reviewList"></div>
+<script>
+let currentTab = 'pending';
+const API_BASE = '/api/review';
+
+async function switchTab(tab) {
+currentTab = tab;
+document.querySelectorAll('.tab').forEach((t, i) => {
+t.classList.toggle('active', (tab === 'pending' && i === 0) || (tab === 'history' && i === 1));
+});
+await loadReviews();
+}
+
+async function loadReviews() {
+const container = document.getElementById('reviewList');
+try {
+const endpoint = currentTab === 'pending' ? 'pending' : 'history';
+const res = await fetch(`${API_BASE}/${endpoint}`);
+const items = await res.json();
+if (items.length === 0) {
+container.innerHTML = `<div class="empty-state"><div class="icon">✅</div><p>暂无${currentTab === 'pending' ? '待审核' : '已审核'}内容</p></div>`;
+return;
+}
+container.innerHTML = items.map(item => renderCard(item)).join('');
+items.forEach(item => {
+const textarea = document.getElementById(`textarea-${item.id}`);
+if (textarea) textarea.value = item.ai_answer;
+});
+} catch (e) {
+container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>加载失败，请检查服务是否运行</p></div>`;
+}
+}
+
+function renderCard(item) {
+if (currentTab === 'pending') {
+return `
+<div class="review-card">
+<div class="question">Q: ${escapeHtml(item.question)}</div>
+<div class="label">AI 回复 <span class="badge-pending">待审核</span></div>
+<div class="answer">${escapeHtml(item.ai_answer)}</div>
+<div class="confidence">置信度: ${(item.confidence * 100).toFixed(0)}%</div>
+<div class="label">修改回复（可选）</div>
+<textarea id="textarea-${item.id}">${escapeHtml(item.ai_answer)}</textarea>
+<div class="actions">
+<button class="btn btn-success" onclick="approve(${item.id})">✓ 采纳</button>
+<button class="btn btn-primary" onclick="editAndApprove(${item.id})">✎ 修改后采纳</button>
+</div>
+</div>`;
+}
+return `
+<div class="review-card">
+<div class="question">Q: ${escapeHtml(item.question)}</div>
+<div class="label">最终回复 <span class="badge-done">已审核</span></div>
+<div class="answer">${escapeHtml(item.ai_answer)}</div>
+<div class="confidence">原置信度: ${(item.confidence * 100).toFixed(0)}%</div>
+</div>`;
+}
+
+async function approve(id) {
+const answer = document.getElementById(`textarea-${id}`).value;
+await fetch(`${API_BASE}/submit`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ conversation_id: id, human_answer: answer, approved: true }),
+});
+await loadReviews();
+}
+
+async function editAndApprove(id) {
+const answer = document.getElementById(`textarea-${id}`).value;
+if (!answer.trim()) return alert('请填写回复内容');
+await fetch(`${API_BASE}/submit`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ conversation_id: id, human_answer: answer, approved: true }),
+});
+await loadReviews();
+}
+
+function escapeHtml(str) {
+const div = document.createElement('div');
+div.textContent = str;
+return div.innerHTML;
+}
+
+loadReviews();
+</script>
+</body>
+</html>
