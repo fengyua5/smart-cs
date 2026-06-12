@@ -16,6 +16,9 @@ if ! ollama list 2>/dev/null | grep -q "qwen3.5"; then
     echo "   拉取 qwen3.5:9b..."
     ollama pull qwen3.5:9b
 fi
+if ! ollama list 2>/dev/null | grep -q "qwen2.5"; then
+    echo "   [可选] 如需更快回复，可安装: ollama pull qwen2.5:7b (非思考模型)"
+fi
 if ! ollama list 2>/dev/null | grep -q "bge-m3"; then
     echo "   拉取 bge-m3..."
     ollama pull bge-m3
