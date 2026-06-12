@@ -12,9 +12,9 @@ if ! command -v ollama &>/dev/null; then
 fi
 
 echo "[1/3] 检查 Ollama 模型..."
-if ! ollama list 2>/dev/null | grep -q "qwen2.5"; then
-    echo "   拉取 qwen2.5:7b..."
-    ollama pull qwen2.5:7b
+if ! ollama list 2>/dev/null | grep -q "qwen3.5"; then
+    echo "   拉取 qwen3.5:9b..."
+    ollama pull qwen3.5:9b
 fi
 if ! ollama list 2>/dev/null | grep -q "bge-m3"; then
     echo "   拉取 bge-m3..."

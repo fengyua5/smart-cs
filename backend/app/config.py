@@ -3,7 +3,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:7b")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.5:9b")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "bge-m3:latest")
 
 CHROMA_PERSIST_DIR = os.path.join(BASE_DIR, "chroma_db")
