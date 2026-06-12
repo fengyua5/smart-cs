@@ -1,3 +1,4 @@
+from typing import Generator
 from langchain_ollama import ChatOllama
 from langchain.schema import HumanMessage, SystemMessage
 from app.config import OLLAMA_BASE_URL, LLM_MODEL
@@ -26,15 +27,25 @@ def get_llm():
     return _llm
 
 
+def _build_messages(question: str, contexts: list[str]) -> list:
+    context_text = "\n\n".join(f"参考 {i+1}: {c}" for i, c in enumerate(contexts))
+    return [
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(content=f"参考知识：\n{context_text}\n\n用户问题：{question}"),
+    ]
+
+
 def generate_answer(question: str, contexts: list[str]) -> str:
     llm = get_llm()
-    context_text = "\n\n".join(f"参考 {i+1}: {c}" for i, c in enumerate(contexts))
+    messages = _build_messages(question, contexts)
+    return llm.invoke(messages).content
 
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(
-            content=f"参考知识：\n{context_text}\n\n用户问题：{question}"
-        ),
-    ]
-    response = llm.invoke(messages)
-    return response.content
+
+def generate_stream(question: str, contexts: list[str]) -> Generator[str, None, None]:
+    """逐 token 流式生成回答"""
+    llm = get_llm()
+    messages = _build_messages(question, contexts)
+    for chunk in llm.stream(messages):
+        content = chunk.content
+        if content:
+            yield content

@@ -55,20 +55,55 @@ const question = inputEl.value.trim();
 if (!question) return;
 inputEl.value = '';
 addMessage(question, 'user');
-showTyping();
 sendBtn.disabled = true;
+
+const botDiv = document.createElement('div');
+botDiv.className = 'message bot';
+botDiv.textContent = '';
+messagesEl.appendChild(botDiv);
+messagesEl.scrollTop = messagesEl.scrollHeight;
+
 try {
-const res = await fetch('/api/chat', {
+const res = await fetch('/api/chat/stream', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({ session_id: SESSION_ID, question }),
 });
-const data = await res.json();
-hideTyping();
-addBotMessage(data);
+const reader = res.body.getReader();
+const decoder = new TextDecoder();
+let buffer = '';
+
+while (true) {
+const { done, value } = await reader.read();
+if (done) break;
+buffer += decoder.decode(value, { stream: true });
+const lines = buffer.split('\n');
+buffer = lines.pop() || '';
+
+for (const line of lines) {
+if (!line.startsWith('data: ')) continue;
+const data = JSON.parse(line.slice(6));
+
+if (data.type === 'token') {
+botDiv.textContent += data.content;
+messagesEl.scrollTop = messagesEl.scrollHeight;
+} else if (data.type === 'meta') {
+const cf = document.createElement('div');
+cf.className = 'confidence';
+cf.textContent = `置信度: ${(data.confidence * 100).toFixed(0)}%`;
+botDiv.appendChild(cf);
+if (data.need_review) {
+botDiv.className = 'message review';
+const badge = document.createElement('div');
+badge.className = 'review-badge';
+badge.textContent = '⏳ 待人工审核';
+botDiv.appendChild(badge);
+}
+}
+}
+}
 } catch (e) {
-hideTyping();
-addMessage('抱歉，服务暂时不可用，请稍后再试。', 'bot');
+botDiv.textContent = '抱歉，服务暂时不可用，请稍后再试。';
 } finally {
 sendBtn.disabled = false;
 inputEl.focus();
@@ -81,43 +116,6 @@ div.className = `message ${role}`;
 div.textContent = text;
 messagesEl.appendChild(div);
 messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-function addBotMessage(data) {
-const div = document.createElement('div');
-if (data.need_review) {
-div.className = 'message review';
-const text = document.createElement('div');
-text.textContent = data.answer;
-div.appendChild(text);
-const badge = document.createElement('div');
-badge.className = 'review-badge';
-badge.textContent = '⏳ 待人工审核';
-div.appendChild(badge);
-} else {
-div.className = 'message bot';
-div.textContent = data.answer;
-}
-const cf = document.createElement('div');
-cf.className = 'confidence';
-cf.textContent = `置信度: ${(data.confidence * 100).toFixed(0)}%`;
-div.appendChild(cf);
-messagesEl.appendChild(div);
-messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-function showTyping() {
-const div = document.createElement('div');
-div.className = 'message bot';
-div.id = 'typing-indicator';
-div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
-messagesEl.appendChild(div);
-messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-function hideTyping() {
-const el = document.getElementById('typing-indicator');
-if (el) el.remove();
 }
 </script>
 </body>

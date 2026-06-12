@@ -1,14 +1,16 @@
 import os
+import json
 from fastapi import FastAPI, Depends
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
 
-from app.database import init_db, get_session, Conversation
+from app.database import init_db, get_session, SessionLocal, Conversation
 from app.models import ChatRequest, ChatResponse, IngestRequest
 from app.rag.retriever import retrieve
-from app.rag.generator import generate_answer
+from app.rag.generator import generate_answer, generate_stream
 from app.rag.confidence import evaluate_confidence
 from app.ingest.pipeline import ingest_all
 from app.review.router import router as review_router
@@ -53,6 +55,56 @@ def _sanitize_answer(answer: str) -> str:
         if pattern in answer:
             return _FALLBACK_ANSWER + "\n\n[自信度: 1]"
     return answer
+
+
+def _sse(event: str, data: object) -> str:
+    return f"data: {json.dumps({'type': event, **data}, ensure_ascii=False)}\n\n"
+
+
+@app.post("/api/chat/stream")
+def chat_stream(body: ChatRequest):
+    contexts, scores = retrieve(body.question)
+
+    def generate():
+        if not contexts:
+            db = SessionLocal()
+            try:
+                conv = Conversation(
+                    session_id=body.session_id, question=body.question,
+                    answer=_FALLBACK_ANSWER, confidence=0.0, need_review=True,
+                )
+                db.add(conv)
+                db.commit()
+                conv_id = conv.id
+            finally:
+                db.close()
+            yield _sse("token", {"content": _FALLBACK_ANSWER})
+            yield _sse("meta", {"confidence": 0.0, "need_review": True, "conversation_id": conv_id})
+            return
+
+        full_answer = ""
+        for token in generate_stream(body.question, contexts):
+            full_answer += token
+            yield _sse("token", {"content": token})
+
+        full_answer = _sanitize_answer(full_answer)
+        confidence, need_review = evaluate_confidence(scores, full_answer)
+
+        db = SessionLocal()
+        try:
+            conv = Conversation(
+                session_id=body.session_id, question=body.question,
+                answer=full_answer, confidence=confidence, need_review=need_review,
+            )
+            db.add(conv)
+            db.commit()
+            conv_id = conv.id
+        finally:
+            db.close()
+
+        yield _sse("meta", {"confidence": confidence, "need_review": need_review, "conversation_id": conv_id})
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 @app.post("/api/chat", response_model=ChatResponse)
