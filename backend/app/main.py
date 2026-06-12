@@ -39,6 +39,22 @@ if os.path.isdir(static_dir):
 app.include_router(review_router)
 
 
+_FALLBACK_ANSWER = "请稍等，我们正在查询，建议您拨打客服热线 400-888-8888 或联系在线客服咨询更多详情。"
+_UNWANTED_PATTERNS = [
+    "暂无相关信息", "没有相关信息", "没有找到", "无法为您解答",
+    "不太清楚", "暂时没有", "我这边没有", "没有关于",
+    "建议您直接访问官网", "建议您访问", "去官网查看", "网站查看",
+    "建议您直接联系", "暂未提供",
+]
+
+
+def _sanitize_answer(answer: str) -> str:
+    for pattern in _UNWANTED_PATTERNS:
+        if pattern in answer:
+            return _FALLBACK_ANSWER + "\n\n[自信度: 1]"
+    return answer
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(body: ChatRequest, db: Session = Depends(get_session)):
     contexts, scores = retrieve(body.question)
@@ -47,7 +63,7 @@ def chat(body: ChatRequest, db: Session = Depends(get_session)):
         conv = Conversation(
             session_id=body.session_id,
             question=body.question,
-            answer="请稍等，我们正在查询，建议您拨打客服热线 400-888-8888 或联系在线客服咨询更多详情。",
+            answer=_FALLBACK_ANSWER,
             confidence=0.0,
             need_review=True,
         )
@@ -61,6 +77,7 @@ def chat(body: ChatRequest, db: Session = Depends(get_session)):
         )
 
     answer = generate_answer(body.question, contexts)
+    answer = _sanitize_answer(answer)
     confidence, need_review = evaluate_confidence(scores, answer)
 
     conv = Conversation(
