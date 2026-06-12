@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md", "docs/technical-design.md"],
+  "agent": {
+    "smart-cs": {
+      "description": "Smart CS AI 智能客服系统维护与开发",
+      "mode": "primary",
+      "model": "openai/gpt-4o",
+      "permission": { "edit": "allow", "bash": "allow" }
+    }
+  },
+  "references": {
+    "docs": {
+      "path": "docs",
+      "description": "项目技术设计文档和规范"
+    }
+  }
+}
