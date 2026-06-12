@@ -22,10 +22,10 @@ if ! ollama list 2>/dev/null | grep -q "bge-m3"; then
 fi
 
 echo "[2/3] 安装 Python 依赖..."
-pip install -r backend/requirements.txt -q
+python3 -m pip install -r backend/requirements.txt -q
 
 echo "[3/3] 导入知识库..."
-PYTHONPATH="$DIR/backend" python -c "
+PYTHONPATH="$DIR/backend" python3 -c "
 from app.ingest.pipeline import ingest_all
 n = ingest_all()
 print(f'   导入 {n} 个文档片段')
@@ -38,4 +38,4 @@ echo "  审核面板: http://localhost:8000/static/review.html"
 echo "  API 文档:  http://localhost:8000/docs"
 echo ""
 
-PYTHONPATH="$DIR/backend" python backend/run.py
+PYTHONPATH="$DIR/backend" python3 backend/run.py
