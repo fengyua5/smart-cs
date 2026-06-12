@@ -18,6 +18,5 @@ def ingest_all():
         persist_directory=CHROMA_PERSIST_DIR,
         collection_name="knowledge",
     )
-    vector_store.persist()
     print(f"成功导入 {len(docs)} 个文档，切分为 {len(chunks)} 个片段")
     return len(chunks)
