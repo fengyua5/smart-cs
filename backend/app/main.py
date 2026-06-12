@@ -10,7 +10,8 @@ from contextlib import asynccontextmanager
 from app.database import init_db, get_session, SessionLocal, Conversation
 from app.models import ChatRequest, ChatResponse, IngestRequest
 from app.rag.retriever import retrieve
-from app.rag.generator import generate_answer, generate_stream
+from app.rag.generator import generate_answer, generate_stream, get_llm
+from app.rag.embedder import get_embeddings
 from app.rag.confidence import evaluate_confidence
 from app.ingest.pipeline import ingest_all
 from app.review.router import router as review_router
@@ -21,6 +22,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    get_embeddings()
+    get_llm()
     yield
 
 
